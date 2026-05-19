@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>GT Enhanced — Словарь</title>
+  <link rel="stylesheet" href="dictionary.css">
+</head>
+<body>
+  <header>
+    <h1>📖 Мой словарь <span id="word-count" class="badge">0</span></h1>
+    <div class="header-controls">
+      <button id="btn-export-csv">⬇ CSV</button>
+      <button id="btn-export-json">⬇ JSON</button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <input id="search-input" type="search" placeholder="Поиск по словам...">
+    <select id="sort-select">
+      <option value="date-desc">Новые сначала</option>
+      <option value="date-asc">Старые сначала</option>
+      <option value="alpha">А–Я</option>
+    </select>
+  </div>
+
+  <div id="word-list" class="word-list">
+    <div class="loading">Загрузка...</div>
+  </div>
+
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal-box">
+      <p>Удалить это слово из словаря?</p>
+      <div class="modal-actions">
+        <button id="modal-confirm" class="btn-danger">Удалить</button>
+        <button id="modal-cancel">Отмена</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="dictionary.js" type="module"></script>
+</body>
+</html>
