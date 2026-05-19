@@ -123,6 +123,7 @@
   let lastTranslation = null;
   let debounceTimer = null;
   let lastSelectedText = '';
+  let currentTargetLang = 'ru';
 
   // ── Exposed for context menu injection ──────────────────────────────────────
   window.__gtShowToast = (original, translation) => {
@@ -157,7 +158,7 @@
     getEl('.gt-original').textContent = text.length > 60 ? text.slice(0, 60) + '…' : text;
     getEl('.gt-content').innerHTML = `
       <div class="gt-translation">${escHtml(translation)}</div>
-      <div class="gt-lang">${lang !== 'unknown' ? lang.toUpperCase() + ' → RU' : ''}</div>`;
+      <div class="gt-lang">${lang !== 'unknown' ? escHtml(lang).toUpperCase() + ' → RU' : ''}</div>`;
     const actions = getEl('.gt-actions');
     actions.style.display = 'flex';
     const saveBtn = getEl('.gt-btn-save');
@@ -192,6 +193,7 @@
     debounceTimer = setTimeout(async () => {
       try {
         const { targetLang } = await chrome.storage.local.get({ targetLang: 'ru' });
+        currentTargetLang = targetLang;
         const resp = await chrome.runtime.sendMessage({ type: 'TRANSLATE', text, targetLang });
         if (resp?.ok) {
           showResult(text, resp.translation, resp.detectedLanguage, pos);
@@ -227,7 +229,7 @@
           type: 'SAVE_WORD',
           word: {
             ...lastTranslation,
-            targetLang: 'ru',
+            targetLang: currentTargetLang,
             context: window.getSelection()?.toString().trim() ?? '',
             source: location.hostname
           }
