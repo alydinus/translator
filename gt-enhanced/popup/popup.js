@@ -92,13 +92,21 @@ function setupListeners() {
   });
 
   document.getElementById('btn-translate-page').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-translate-page');
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id) return;
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content/content.js'] });
-    chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: () => window.__gtTranslatePage?.()
-    });
+    btn.textContent = '⏳ Переводим...';
+    btn.disabled = true;
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content/content.js'] });
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => window.__gtTranslatePage?.()
+      });
+    } finally {
+      btn.textContent = '🌐 Перевести страницу';
+      btn.disabled = false;
+    }
   });
 
   document.getElementById('btn-options').addEventListener('click', () => {

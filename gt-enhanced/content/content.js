@@ -130,6 +130,36 @@
     showResult(original, translation, 'unknown', { x: window.innerWidth / 2, y: 80 });
   };
 
+  window.__gtTranslatePage = async () => {
+    const { targetLang } = await chrome.storage.local.get({ targetLang: 'ru' });
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      { acceptNode: n => {
+          const skip = ['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT'];
+          if (skip.includes(n.parentElement?.tagName)) return NodeFilter.FILTER_REJECT;
+          if (!n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+      }}
+    );
+    const nodes = [];
+    let node;
+    while ((node = walker.nextNode())) nodes.push(node);
+
+    // Batch in groups of 10 to avoid huge requests
+    for (let i = 0; i < nodes.length; i += 10) {
+      const batch = nodes.slice(i, i + 10);
+      await Promise.all(batch.map(async (n) => {
+        try {
+          const text = n.nodeValue.trim();
+          if (text.length < 2 || text.length > 4000) return;
+          const resp = await chrome.runtime.sendMessage({ type: 'TRANSLATE', text, targetLang });
+          if (resp?.ok) n.nodeValue = resp.translation;
+        } catch { /* skip node on error */ }
+      }));
+    }
+  };
+
   // ── Helpers ─────────────────────────────────────────────────────────────────
   function getEl(selector) { return shadow.querySelector(selector); }
 
