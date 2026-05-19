@@ -1,6 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GT Enhanced",
+  "default_locale": "en",
   "version": "1.0.0",
   "description": "Google Translate upgrade with personal cloud dictionary",
   "permissions": [
