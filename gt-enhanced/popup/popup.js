@@ -75,6 +75,7 @@ function setupListeners() {
   document.getElementById('btn-signout').addEventListener('click', async () => {
     await send({ type: 'SIGN_OUT' });
     renderAuth(null);
+    await loadDictionaryCount();
   });
 
   document.getElementById('btn-save-result').addEventListener('click', async () => {
