@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GT Enhanced</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <span class="logo">GT Enhanced</span>
+    <div class="header-actions">
+      <button id="btn-options" title="Настройки">⚙</button>
+      <div id="auth-area">
+        <button id="btn-signin" class="btn-signin">Войти</button>
+        <img id="user-avatar" class="avatar hidden" src="" alt="">
+        <button id="btn-signout" class="btn-signout hidden" title="Выйти">Выйти</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="lang-row">
+    <select id="select-source">
+      <option value="auto">Авто</option>
+      <option value="en">EN</option>
+      <option value="ru">RU</option>
+      <option value="de">DE</option>
+      <option value="fr">FR</option>
+      <option value="es">ES</option>
+    </select>
+    <button id="btn-swap">⇄</button>
+    <select id="select-target">
+      <option value="ru" selected>RU</option>
+      <option value="en">EN</option>
+      <option value="de">DE</option>
+      <option value="fr">FR</option>
+      <option value="es">ES</option>
+    </select>
+  </div>
+
+  <textarea id="input-text" placeholder="Введите текст..." rows="4"></textarea>
+  <button id="btn-translate" class="btn-primary">Перевести</button>
+
+  <div id="result-area" class="result-area hidden">
+    <div id="result-text" class="result-text"></div>
+    <button id="btn-save-result" class="btn-save">♡ В словарь</button>
+  </div>
+
+  <div id="banner-no-key" class="banner banner-warn hidden">
+    ⚠ API ключ не настроен.
+    <button id="btn-open-options">Открыть настройки</button>
+  </div>
+
+  <div class="footer-actions">
+    <button id="btn-dictionary">📖 Словарь</button>
+    <button id="btn-translate-page">🌐 Перевести страницу</button>
+  </div>
+</body>
+<script src="popup.js" type="module"></script>
+</html>
