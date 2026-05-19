@@ -12,7 +12,6 @@
   ],
   "host_permissions": [
     "https://translation.googleapis.com/*",
-    "https://*.firebaseio.com/*",
     "https://firestore.googleapis.com/*",
     "https://identitytoolkit.googleapis.com/*",
     "https://securetoken.googleapis.com/*"
@@ -44,7 +43,7 @@
   "web_accessible_resources": [
     {
       "resources": ["dictionary/dictionary.html"],
-      "matches": ["<all_urls>"]
+      "matches": ["chrome-extension://*/*"]
     }
   ],
   "oauth2": {
