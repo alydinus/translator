@@ -11,6 +11,29 @@
   const style = document.createElement('style');
   style.textContent = `
     :host { all: initial; }
+
+    #gt-icon {
+      position: fixed;
+      z-index: 2147483647;
+      background: #1a73e8;
+      color: #fff;
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Google Sans', Roboto, sans-serif;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      user-select: none;
+      transition: transform .1s;
+    }
+    #gt-icon:hover { transform: scale(1.12); }
+    #gt-icon.visible { display: flex; }
+
     #gt-popup {
       position: fixed;
       z-index: 2147483647;
@@ -99,16 +122,15 @@
     }
   `;
 
+  const icon = document.createElement('div');
+  icon.id = 'gt-icon';
+  icon.textContent = 'T';
+
   const popup = document.createElement('div');
   popup.id = 'gt-popup';
   popup.innerHTML = `
     <div class="gt-original"></div>
-    <div class="gt-content">
-      <div class="gt-loader">
-        <div class="gt-spinner"></div>
-        <span>Переводим...</span>
-      </div>
-    </div>
+    <div class="gt-content"></div>
     <div class="gt-actions" style="display:none">
       <button class="gt-btn-save">♡ Сохранить</button>
       <button class="gt-btn-close">✕</button>
@@ -116,14 +138,15 @@
   `;
 
   shadow.appendChild(style);
+  shadow.appendChild(icon);
   shadow.appendChild(popup);
   document.documentElement.appendChild(host);
 
   // ── State ───────────────────────────────────────────────────────────────────
   let lastTranslation = null;
-  let debounceTimer = null;
   let lastSelectedText = '';
   let currentTargetLang = 'ru';
+  let iconPos = { x: 0, y: 0 };
 
   // ── Exposed for context menu injection ──────────────────────────────────────
   window.__gtShowToast = (original, translation) => {
@@ -146,7 +169,6 @@
     let node;
     while ((node = walker.nextNode())) nodes.push(node);
 
-    // Batch in groups of 10 to avoid huge requests
     for (let i = 0; i < nodes.length; i += 10) {
       const batch = nodes.slice(i, i + 10);
       await Promise.all(batch.map(async (n) => {
@@ -155,13 +177,17 @@
           if (text.length < 2 || text.length > 4000) return;
           const resp = await chrome.runtime.sendMessage({ type: 'TRANSLATE', text, targetLang });
           if (resp?.ok) n.nodeValue = resp.translation;
-        } catch { /* skip node on error */ }
+        } catch { /* skip */ }
       }));
     }
   };
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
   function getEl(selector) { return shadow.querySelector(selector); }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
 
   function positionPopup(x, y) {
     const margin = 12;
@@ -172,6 +198,19 @@
     if (top + h > window.innerHeight - margin) top = y - h - 16;
     popup.style.left = Math.max(margin, left) + 'px';
     popup.style.top  = Math.max(margin, top)  + 'px';
+  }
+
+  function showIcon(x, y) {
+    iconPos = { x, y };
+    const left = Math.min(x + 8, window.innerWidth - 44);
+    const top  = Math.max(8, y - 44);
+    icon.style.left = left + 'px';
+    icon.style.top  = top  + 'px';
+    icon.classList.add('visible');
+  }
+
+  function hideIcon() {
+    icon.classList.remove('visible');
   }
 
   function showLoader(text, pos) {
@@ -204,29 +243,38 @@
     lastTranslation = null;
   }
 
-  function escHtml(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function hideAll() {
+    hidePopup();
+    hideIcon();
   }
 
-  // ── Selection listener ──────────────────────────────────────────────────────
-  document.addEventListener('mouseup', (e) => {
-    const text = window.getSelection()?.toString().trim() ?? '';
-    if (text === lastSelectedText) return;
-    lastSelectedText = text;
+  function sendMsg(msg) {
+    try {
+      return chrome.runtime.sendMessage(msg);
+    } catch {
+      // Extension was reloaded — prompt user to refresh the page
+      getEl('.gt-content').innerHTML =
+        `<div style="color:#d93025;font-size:13px">Расширение обновилось. Обновите страницу (F5).</div>`;
+      getEl('.gt-actions').style.display = 'none';
+      popup.classList.add('visible');
+      return Promise.resolve(null);
+    }
+  }
 
-    clearTimeout(debounceTimer);
-    if (text.length < 2 || text.length > 500) { hidePopup(); return; }
-
-    const pos = { x: e.clientX, y: e.clientY };
-    showLoader(text, pos);
-
-    debounceTimer = setTimeout(async () => {
+  // ── Icon click → translate ──────────────────────────────────────────────────
+  shadow.addEventListener('click', async (e) => {
+    // Translate icon
+    if (e.target === icon) {
+      const text = lastSelectedText;
+      if (!text) return;
+      hideIcon();
+      showLoader(text, iconPos);
       try {
         const { targetLang } = await chrome.storage.local.get({ targetLang: 'ru' });
         currentTargetLang = targetLang;
-        const resp = await chrome.runtime.sendMessage({ type: 'TRANSLATE', text, targetLang });
+        const resp = await sendMsg({ type: 'TRANSLATE', text, targetLang });
         if (resp?.ok) {
-          showResult(text, resp.translation, resp.detectedLanguage, pos);
+          showResult(text, resp.translation, resp.detectedLanguage, iconPos);
         } else {
           getEl('.gt-content').innerHTML =
             `<div style="color:#d93025;font-size:13px">${escHtml(resp?.error ?? 'Ошибка перевода')}</div>`;
@@ -237,30 +285,27 @@
         getEl('.gt-content').innerHTML =
           `<div style="color:#d93025;font-size:13px">${escHtml(err.message)}</div>`;
       }
-    }, 300);
-  });
-
-  document.addEventListener('mousedown', (e) => {
-    if (!shadow.contains(e.target)) hidePopup();
-  });
-
-  // ── Save button / close button ──────────────────────────────────────────────
-  shadow.addEventListener('click', async (e) => {
-    if (e.target.classList.contains('gt-btn-close')) {
-      hidePopup();
       return;
     }
+
+    // Close button
+    if (e.target.classList.contains('gt-btn-close')) {
+      hideAll();
+      return;
+    }
+
+    // Save button
     if (e.target.classList.contains('gt-btn-save') && lastTranslation) {
       const btn = e.target;
       btn.disabled = true;
       btn.textContent = '...';
       try {
-        const resp = await chrome.runtime.sendMessage({
+        const resp = await sendMsg({
           type: 'SAVE_WORD',
           word: {
             ...lastTranslation,
             targetLang: currentTargetLang,
-            context: window.getSelection()?.toString().trim() ?? '',
+            context: lastSelectedText,
             source: location.hostname
           }
         });
@@ -277,5 +322,23 @@
         btn.disabled = false;
       }
     }
+  });
+
+  // ── Selection listener — show icon only ────────────────────────────────────
+  document.addEventListener('mouseup', (e) => {
+    // Ignore clicks inside our own UI
+    if (e.target === host) return;
+
+    const text = window.getSelection()?.toString().trim() ?? '';
+    if (text.length >= 2 && text.length <= 500) {
+      lastSelectedText = text;
+      hidePopup();
+      showIcon(e.clientX, e.clientY);
+    }
+  });
+
+  // ── Hide on outside click — host.contains handles shadow DOM retargeting ───
+  document.addEventListener('mousedown', (e) => {
+    if (!host.contains(e.target)) hideAll();
   });
 })();

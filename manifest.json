@@ -49,7 +49,7 @@
     }
   ],
   "oauth2": {
-    "client_id": "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+    "client_id": "928802285038-2eu25h21a0j9sdebha87qm8op6i9va3q.apps.googleusercontent.com",
     "scopes": ["openid", "email", "profile"]
   }
 }

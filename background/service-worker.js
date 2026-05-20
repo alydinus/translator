@@ -246,26 +246,25 @@ async function signInWithGoogle() {
 
   const authUrl = new URL('https://accounts.google.com/o/oauth2/auth');
   authUrl.searchParams.set('client_id', clientId);
-  authUrl.searchParams.set('response_type', 'id_token');
+  authUrl.searchParams.set('response_type', 'token');
   authUrl.searchParams.set('scope', 'openid email profile');
   authUrl.searchParams.set('redirect_uri', redirectUri);
-  authUrl.searchParams.set('nonce', crypto.randomUUID());
 
   const redirectUrl = await chrome.identity.launchWebAuthFlow({
     url: authUrl.toString(),
     interactive: true
   });
 
-  const params  = new URLSearchParams(new URL(redirectUrl).hash.slice(1));
-  const idToken = params.get('id_token');
-  if (!idToken) throw new Error('No id_token in redirect URL');
+  const params      = new URLSearchParams(new URL(redirectUrl).hash.slice(1));
+  const accessToken = params.get('access_token');
+  if (!accessToken) throw new Error('No access_token in redirect URL');
 
-  // Exchange Google id_token for Firebase id_token + refresh_token
+  // Exchange Google access_token for Firebase id_token + refresh_token
   const res = await fetch(SIGN_IN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      postBody: `id_token=${encodeURIComponent(idToken)}&providerId=google.com`,
+      postBody: `access_token=${encodeURIComponent(accessToken)}&providerId=google.com`,
       requestUri: redirectUri,
       returnIdpCredential: true,
       returnSecureToken: true
