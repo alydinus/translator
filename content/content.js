@@ -147,6 +147,10 @@
   let lastSelectedText = '';
   let currentTargetLang = 'ru';
   let iconPos = { x: 0, y: 0 };
+  let pendingText = '';
+  let selectionRect = null;
+  let hoverTimer = null;
+  let lastMousePos = { x: 0, y: 0 };
 
   // ── Exposed for context menu injection ──────────────────────────────────────
   window.__gtShowToast = (original, translation) => {
@@ -324,21 +328,61 @@
     }
   });
 
-  // ── Selection listener — show icon only ────────────────────────────────────
+  // ── Selection listener — save text, show icon only on hover ───────────────
   document.addEventListener('mouseup', (e) => {
-    // Ignore clicks inside our own UI
     if (e.target === host) return;
 
-    const text = window.getSelection()?.toString().trim() ?? '';
+    const sel = window.getSelection();
+    const text = sel?.toString().trim() ?? '';
+    clearTimeout(hoverTimer);
+    hoverTimer = null;
+
     if (text.length >= 2 && text.length <= 500) {
       lastSelectedText = text;
+      pendingText = text;
+      selectionRect = sel.rangeCount > 0 ? sel.getRangeAt(0).getBoundingClientRect() : null;
       hidePopup();
-      showIcon(e.clientX, e.clientY);
+      hideIcon();
+    } else {
+      pendingText = '';
+      selectionRect = null;
+    }
+  });
+
+  // ── Show icon after hovering over selection for 500ms ─────────────────────
+  document.addEventListener('mousemove', (e) => {
+    lastMousePos = { x: e.clientX, y: e.clientY };
+    if (!pendingText || !selectionRect) return;
+    if (icon.classList.contains('visible')) return;
+
+    const pad = 8;
+    const inBounds =
+      e.clientX >= selectionRect.left  - pad &&
+      e.clientX <= selectionRect.right + pad &&
+      e.clientY >= selectionRect.top   - pad &&
+      e.clientY <= selectionRect.bottom + pad;
+
+    if (inBounds) {
+      if (!hoverTimer) {
+        hoverTimer = setTimeout(() => {
+          hoverTimer = null;
+          if (pendingText) showIcon(lastMousePos.x, lastMousePos.y);
+        }, 500);
+      }
+    } else {
+      clearTimeout(hoverTimer);
+      hoverTimer = null;
     }
   });
 
   // ── Hide on outside click — host.contains handles shadow DOM retargeting ───
   document.addEventListener('mousedown', (e) => {
-    if (!host.contains(e.target)) hideAll();
+    if (!host.contains(e.target)) {
+      clearTimeout(hoverTimer);
+      hoverTimer = null;
+      pendingText = '';
+      selectionRect = null;
+      hideAll();
+    }
   });
 })();
